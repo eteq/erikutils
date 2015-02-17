@@ -168,3 +168,11 @@ def get_deimos_slits_inorder(maskfn):
     cats = cdata[np.searchsorted(cdata['ObjectId'], somdata['ObjectId'][xorder])]
 
     return scsinorder, ddesi[xorder], cats
+
+
+def to_clipboard(data):
+    import subprocess
+
+    p = subprocess.Popen('pbcopy', stdin=subprocess.PIPE)
+    p.communicate(data)
+    return p.wait()
