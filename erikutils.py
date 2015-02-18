@@ -176,3 +176,22 @@ def to_clipboard(data):
     p = subprocess.Popen('pbcopy', stdin=subprocess.PIPE)
     p.communicate(data)
     return p.wait()
+
+
+def keola_html_to_ascii_log(htmlfn, outfn=None):
+    from astropy.io import ascii
+
+    if not htmlfn.endswith('.html'):
+        raise ValueError('need the html log from KeOLA')
+    if outfn is None:
+        outfn = htmlfn[:-5] + '.log'
+
+    header = ascii.read(htmlfn, format='html', htmldict={'table_id': 1})
+    observations = ascii.read(htmlfn, format='html', htmldict={'table_id': 2})
+
+    with open(outfn, 'w') as f:
+        header.write(f, format='ascii.no_header')
+        f.write('\n\n')
+        observations.write(f, format='ascii')
+
+    return outfn
