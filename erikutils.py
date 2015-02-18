@@ -111,7 +111,7 @@ def show_imagelist(scs, names=None, url=SDSS_IMAGE_LIST_URL, posttoimglist=3.):
 
 
 def show_skycoord_sdss(sc, openinbrowser=True,
-                       baseurl='http://skyserver.sdss3.org/dr12/en/tools/chart/navi.aspx?ra={ra}&dec={dec}',
+                       baseurl='http://skyserver.sdss.org/dr12/en/tools/chart/navi.aspx?ra={ra}&dec={dec}',
                        **kwargs):
     """
     Shows a `SkyCoord` in the SDSS Navigate interface.
