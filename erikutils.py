@@ -15,7 +15,7 @@ def write_to_mac_clipboard(s):
     return p.communicate(s)
 
 
-SDSS_IMAGE_LIST_URL = 'http://skyserver.sdss3.org/dr10/en/tools/chart/list.aspx'
+SDSS_IMAGE_LIST_URL = 'http://skyserver.sdss.org/dr12/en/tools/chart/list.aspx'
 _imglist_post_templ = """
 <html>
 <head>
