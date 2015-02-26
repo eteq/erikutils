@@ -179,6 +179,14 @@ def to_clipboard(data):
 
 
 def keola_html_to_ascii_log(htmlfn, outfn=None):
+    """
+    Takes an html output like what comes out when you hit the "save to disk"
+    button on the Keck e-log tool, and outputs an ASCII-formatted file with the
+    observing log info.
+
+    Currently this doesn't output the night comments or weather data, because
+    that requires more complex parsing of the html.  Maybe later I'll do that.
+    """
     from astropy.io import ascii
 
     if not htmlfn.endswith('.html'):
