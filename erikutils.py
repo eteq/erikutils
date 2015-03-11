@@ -230,13 +230,42 @@ def plot_deimos_spec1d(fn, horne=False, mady=False, smoothing=False):
 
         plt.plot(db['LAMBDA'][0], db['IVAR'][0]**-0.5, color='k', ls=':')
         plt.plot(dr['LAMBDA'][0], dr['IVAR'][0]**-0.5, color='k', ls=':')
+        plt.xlabel(r'$\lambda [{\rm \AA}]$ ')
+        plt.title(fn)
 
         if mady:
             specbr = np.concatenate((db['SPEC'][0], dr['SPEC'][0]))
             mad = median_absolute_deviation(specbr)
             med = np.median(specbr)
-            plt.ylim(med-mad*int(mady), med+mad*int(mady))
 
 
+def plot_deimos_slit(fn, madcolorscale=None, scalekwargs=None):
+    from astropy.io import fits
+    from matplotlib import pyplot as plt
+    from astropy.stats import median_absolute_deviation
+    from astropy.visualization import scale_image
 
+    with fits.open(fn) as f:
+        h = f[1].header
+        d = f[1].data
+
+        xsz, ysz = map(int, h['TDIM1'][1:-1].strip().split(','))
+
+        dflux = d['FLUX'].reshape((ysz, xsz))
+
+
+    if scalekwargs:
+        dflux = scale_image(dflux, **scalekwargs)
+
+    if madcolorscale is None:
+        vmin = vmax = None
+    else:
+        mad = median_absolute_deviation(dflux)
+        med = np.median(dflux)
+        vmin=med-mad*float(madcolorscale)
+        vmax=med+mad*float(madcolorscale)
+
+    plt.title(fn)
+    plt.imshow(dflux, interpolation='nearest', vmin=vmin, vmax=vmax)
+    plt.colorbar(orientation='horizontal')
 
