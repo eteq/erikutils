@@ -5,8 +5,6 @@ Various helpful snippets by Erik Tollerud (erik.tollerud@gmail.com)
 
 import numpy as np
 
-__all__ = ['write_to_mac_clipboard', 'show_imagelist']
-
 
 def write_to_mac_clipboard(s):
     from subprocess import Popen, PIPE
@@ -203,3 +201,42 @@ def keola_html_to_ascii_log(htmlfn, outfn=None):
         observations.write(f, format='ascii')
 
     return outfn
+
+
+def plot_deimos_spec1d(fn, horne=False, mady=False, smoothing=False):
+    from astropy.io import fits
+    from astropy.stats import median_absolute_deviation
+    from matplotlib import pyplot as plt
+    from scipy import signal
+
+    with fits.open(fn) as f:
+        db = f[1+int(horne)*3].data
+        dr = f[2+int(horne)*3].data
+
+        bspec = db['SPEC'][0]
+        rspec = dr['SPEC'][0]
+
+        if smoothing:
+            if smoothing < 0:
+                kernelb = signal.gaussian(len(bspec), -smoothing)
+                kernelr = signal.gaussian(len(rspec), -smoothing)
+            else:
+                kernelr = kernelb = [1/float(smoothing)] * int(smoothing)
+            bspec = np.convolve(bspec, kernelb, 'spec')
+            rspec = np.convolve(rspec, kernelr, 'spec')
+
+        plt.step(db['LAMBDA'][0], bspec, color='b', where='mid')
+        plt.step(dr['LAMBDA'][0], rspec, color='r', where='mid')
+
+        plt.plot(db['LAMBDA'][0], db['IVAR'][0]**-0.5, color='k', ls=':')
+        plt.plot(dr['LAMBDA'][0], dr['IVAR'][0]**-0.5, color='k', ls=':')
+
+        if mady:
+            specbr = np.concatenate((db['SPEC'][0], dr['SPEC'][0]))
+            mad = median_absolute_deviation(specbr)
+            med = np.median(specbr)
+            plt.ylim(med-mad*int(mady), med+mad*int(mady))
+
+
+
+
