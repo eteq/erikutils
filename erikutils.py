@@ -5,6 +5,7 @@ Various helpful snippets by Erik Tollerud (erik.tollerud@gmail.com)
 
 import numpy as np
 from astropy import units as u
+from astropy import constants as cnst
 
 
 def write_to_mac_clipboard(s):
@@ -203,14 +204,49 @@ def keola_html_to_ascii_log(htmlfn, outfn=None):
     return outfn
 
 
-def plot_deimos_spec1d(fn, horne=False, mady=False, smoothing=False):
+def plot_deimos_spec1d(fn, horne=False, smoothing=False, catv=None, mady=False):
     """
-    returns xb, bspec, xr, rspec
+    Plots a reduced DEIMOS spec1d file with matplotlib
+
+    Parameters
+    ----------
+    fn : str
+        The spec1d file to load
+    horne : bool
+        If True, use the horne extraction, otherwise boxcar
+    smoothing : float or False
+        If not False/0, smooth the spectrum.  If positive, the value gives the
+        number of pixels of boxcar smoothing to use.  If negative, gives the
+        size of a gaussian kernel to use for smoothing.
+    catv : None or astropy Quantity with velocity units
+        If not None, shows Halpha and the calcium triplet assuming the star is
+        moving at the provided velocity (use E.g. ``0*u.km/u.s`` for rest
+        wavelength).
+    mady : float or False
+        If not False/0, re-scale the part of the spectrum shown to ``mady``
+        median absolute deviations from the median
+
+
+
+    Returns
+    -------
+    xb
+        wl array for the blue side
+    bspec
+        spectrum for the blue side
+    xr
+        wl array for the red side
+    rspec
+        spectrum for the red side
+
     """
     from astropy.io import fits
     from astropy.stats import median_absolute_deviation
     from matplotlib import pyplot as plt
     from scipy import signal
+
+    # Halpha + CaT
+    lineswl = [6562.801, 8498.03, 8542.09, 8662.14]*u.angstrom
 
     with fits.open(fn) as f:
         db = f[1+int(horne)*3].data
@@ -233,6 +269,11 @@ def plot_deimos_spec1d(fn, horne=False, mady=False, smoothing=False):
 
         plt.plot(db['LAMBDA'][0], db['IVAR'][0]**-0.5, color='k', ls=':')
         plt.plot(dr['LAMBDA'][0], dr['IVAR'][0]**-0.5, color='k', ls=':')
+
+        if catv is not None:
+            for wl in lineswl:
+                plt.axvline((wl*(1+catv/cnst.c)).to(u.angstrom).value, c='k')
+
         plt.xlabel(r'$\lambda [{\rm \AA}]$ ')
         plt.title(fn)
 
@@ -240,6 +281,12 @@ def plot_deimos_spec1d(fn, horne=False, mady=False, smoothing=False):
             specbr = np.concatenate((db['SPEC'][0], dr['SPEC'][0]))
             mad = median_absolute_deviation(specbr)
             med = np.median(specbr)
+
+            uppery = med + mad*mady
+            lowery = med - mad*mady
+            if lowery > 0:
+                lowery = 0
+            plt.ylim(lowery, uppery)
 
         return db['LAMBDA'][0], bspec, dr['LAMBDA'][0], rspec
 
@@ -267,8 +314,8 @@ def plot_deimos_slit(fn, madcolorscale=None, scalekwargs=None):
     else:
         mad = median_absolute_deviation(dflux)
         med = np.median(dflux)
-        vmin=med-mad*float(madcolorscale)
-        vmax=med+mad*float(madcolorscale)
+        vmin = med-mad*float(madcolorscale)
+        vmax = med+mad*float(madcolorscale)
 
     plt.title(fn)
     plt.imshow(dflux, interpolation='nearest', vmin=vmin, vmax=vmax)
