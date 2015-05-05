@@ -4,6 +4,7 @@ Various helpful snippets by Erik Tollerud (erik.tollerud@gmail.com)
 """
 
 import numpy as np
+from astropy import units as u
 
 
 def write_to_mac_clipboard(s):
@@ -151,7 +152,6 @@ def get_deimos_slits_inorder(maskfn):
 
     return scs, desislits, objcats
     """
-    from astropy import units as u
     from astropy.coordinates import SkyCoord
     from astropy.io import fits
 
@@ -204,6 +204,9 @@ def keola_html_to_ascii_log(htmlfn, outfn=None):
 
 
 def plot_deimos_spec1d(fn, horne=False, mady=False, smoothing=False):
+    """
+    returns xb, bspec, xr, rspec
+    """
     from astropy.io import fits
     from astropy.stats import median_absolute_deviation
     from matplotlib import pyplot as plt
@@ -238,6 +241,8 @@ def plot_deimos_spec1d(fn, horne=False, mady=False, smoothing=False):
             mad = median_absolute_deviation(specbr)
             med = np.median(specbr)
 
+        return db['LAMBDA'][0], bspec, dr['LAMBDA'][0], rspec
+
 
 def plot_deimos_slit(fn, madcolorscale=None, scalekwargs=None):
     from astropy.io import fits
@@ -268,4 +273,3 @@ def plot_deimos_slit(fn, madcolorscale=None, scalekwargs=None):
     plt.title(fn)
     plt.imshow(dflux, interpolation='nearest', vmin=vmin, vmax=vmax)
     plt.colorbar(orientation='horizontal')
-
