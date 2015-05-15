@@ -7,6 +7,9 @@ import numpy as np
 from astropy import units as u
 from astropy import constants as cnst
 
+from astropy.io import fits, ascii
+from astropy.coordinates import SkyCoord, Angle
+
 
 def write_to_mac_clipboard(s):
     from subprocess import Popen, PIPE
@@ -153,9 +156,6 @@ def get_deimos_slits_inorder(maskfn):
 
     return scs, desislits, objcats
     """
-    from astropy.coordinates import SkyCoord
-    from astropy.io import fits
-
     f = fits.open(maskfn)
     xorder = np.argsort(f['BluSlits'].data['slitX1'])
 
@@ -186,8 +186,6 @@ def keola_html_to_ascii_log(htmlfn, outfn=None):
     Currently this doesn't output the night comments or weather data, because
     that requires more complex parsing of the html.  Maybe later I'll do that.
     """
-    from astropy.io import ascii
-
     if not htmlfn.endswith('.html'):
         raise ValueError('need the html log from KeOLA')
     if outfn is None:
@@ -240,7 +238,6 @@ def plot_deimos_spec1d(fn, horne=False, smoothing=False, catv=None, mady=False):
         spectrum for the red side
 
     """
-    from astropy.io import fits
     from astropy.stats import median_absolute_deviation
     from matplotlib import pyplot as plt
     from scipy import signal
@@ -292,7 +289,6 @@ def plot_deimos_spec1d(fn, horne=False, smoothing=False, catv=None, mady=False):
 
 
 def plot_deimos_slit(fn, madcolorscale=None, scalekwargs=None):
-    from astropy.io import fits
     from matplotlib import pyplot as plt
     from astropy.stats import median_absolute_deviation
     from astropy.visualization import scale_image
@@ -304,7 +300,6 @@ def plot_deimos_slit(fn, madcolorscale=None, scalekwargs=None):
         xsz, ysz = map(int, h['TDIM1'][1:-1].strip().split(','))
 
         dflux = d['FLUX'].reshape((ysz, xsz))
-
 
     if scalekwargs:
         dflux = scale_image(dflux, **scalekwargs)
@@ -320,3 +315,50 @@ def plot_deimos_slit(fn, madcolorscale=None, scalekwargs=None):
     plt.title(fn)
     plt.imshow(dflux, interpolation='nearest', vmin=vmin, vmax=vmax)
     plt.colorbar(orientation='horizontal')
+
+
+def regions_to_skycoord(ds9=None):
+    """
+    Gets the regions from ds9 and returns their locations as a skycoord
+
+    Returns sc, names, others
+    """
+    import pyds9
+    import pyregion
+
+    if ds9 is None:
+        ds9 = pyds9.DS9()
+
+    oldsys = ds9.get('regions system')
+    oldsf = ds9.get('regions skyformat')
+    try:
+        ds9.set('regions system wcs')
+        ds9.set('regions skyformat degrees')
+        regstr = ds9.get('regions')
+    finally:
+        ds9.set('regions system ' + oldsys)
+        ds9.set('regions skyformat ' + oldsf)
+
+    frame = ds9.get('regions sky')
+    regs = pyregion.parse(regstr)
+
+    ras = []
+    decs = []
+    names = []
+    others = []
+    for s in regs:
+        ras.append(s.params[0].v*u.deg)
+        decs.append(s.params[1].v*u.deg)
+
+        names.append(s.name)
+
+        other = []
+        for p in s.params[2:]:
+            if hasattr(p, 'degree'):
+                other.append(Angle(p.degree, u.deg))
+            else:
+                other.append(p.v)
+        others.append(tuple(other))
+
+    scs = SkyCoord(ras, decs, unit=u.deg, frame=frame)
+    return scs, names, others
