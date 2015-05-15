@@ -362,3 +362,40 @@ def regions_to_skycoord(ds9=None):
 
     scs = SkyCoord(ras, decs, unit=u.deg, frame=frame)
     return scs, names, others
+
+
+def skycoord_to_regions(scs, shape, otherparams, ds9=None):
+    """
+    Add regions to an open ds9 from a SkyCoord
+
+    Parameters
+    ----------
+    scs : SkyCoord
+        The coordinate(s) to place a region from
+    shape : str
+        The name of the type of shape (goes straight into the region file)
+    otherparams : str or list of str
+        The params after the coordinates.  If a list, must match the length of
+        `scs`.  If a str, the same string will be used for all.
+    ds9 : pyds9.DS9 or None
+        The ds9 instance to use.  If None, will try to create one.
+    """
+    import pyds9
+
+    if ds9 is None:
+        ds9 = pyds9.DS9()
+
+    if scs.isscalar:
+        scs = SkyCoord([scs])
+
+    reglines = []
+    if isinstance(otherparams, basestring):
+        for ra, dec in zip(scs.ra.deg, scs.dec.deg):
+            reglines.append('icrs; {shape} {ra}d {dec}d '.format(**locals()) + otherparams)
+    else:
+        if len(otherparams) != len(scs):
+            raise ValueError('otherparams must match scs')
+        for ra, dec, otherparam in zip(scs.ra.deg, scs.dec.deg, otherparams):
+            reglines.append('icrs; {shape} {ra}d {dec}d '.format(**locals()) + otherparam)
+
+    ds9.set('regions', '\n'.join(reglines))
