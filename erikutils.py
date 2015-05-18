@@ -113,6 +113,56 @@ def show_imagelist(scs, names=None, url=SDSS_IMAGE_LIST_URL, posttoimglist=3.):
     return text
 
 
+def get_sdss_cutout_url(coord, size=204.8*u.arcsec, pixelscale=0.4*u.arcsec/u.pixel, opts='',
+                        baseurl='http://skyservice.pha.jhu.edu/DR12/ImgCutout/getjpeg.aspx'):
+    """
+    Gets the URL to get an SDSS image cutout
+
+    Parameters
+    ----------
+    coord : SkyCoord
+        The coordinate to view
+    size : astropy quantity (scalar or length-2) with units of arcsec or pixels
+        The size of the image.  If a single value, assumes square.  If two
+        values, they are (width, height)
+    pixelscale : quantity in angle/pixel or pixel/angle
+        The pixel scale for the output images.
+    opts : str
+        The 'opt' to supply to the cutout service (see SDSS docs for what they mean).
+    baseurl : str
+        The URL to use for the cutout service (without the query part).
+
+
+    Returns
+    -------
+    url : str
+        The url for the image cutout.
+
+    """
+    from urllib import urlencode
+
+    if pixelscale.unit.is_equivalent(u.pixel/u.arcsec):
+        pixelscale = 1/pixelscale
+    pixscaleapp = pixelscale.to(u.arcsec/u.pixel).value
+
+    if size.unit.is_equivalent(u.arcsec):
+        size = size / pixelscale
+
+    if size.isscalar:
+        wpix = hpix = size.to(u.pixel).value
+    elif len(size) == 2:
+        wpix, hpix = size.to(u.pixel).value
+    else:
+        raise ValueError('size must be a scalar or length-2 quantity')
+
+    qrydct = {'ra': coord.ra.deg, 'dec': coord.dec.deg,
+              'width': int(wpix), 'height': int(hpix),
+              'scale': pixscaleapp, 'opt': opts}
+    url = baseurl + '?' + urlencode(qrydct)
+
+    return url
+
+
 def show_skycoord_sdss(sc, openinbrowser=True,
                        baseurl='http://skyserver.sdss.org/dr12/en/tools/chart/navi.aspx?ra={ra}&dec={dec}',
                        **kwargs):
