@@ -9,7 +9,7 @@ import time
 
 
 invoke_spec1d_templ = "et_spec1d,'{maskname}'\nexit\n"
-invoke_mcerrs_templ = "et_mcerrs,'{maskname}',{nmc}\nexit\n"
+invoke_mcerrs_templ = "et_mcerrs,'{maskname}',nmc={nmc},qualcut={qualcut}\nexit\n"
 
 
 def _do_invoke(maskname, datadir, idlsrc, logsuffix):
@@ -55,7 +55,7 @@ def invoke_spec1d(maskname, datadir=None):
     return proc
 
 
-def invoke_mcerrs(maskname, nmc=500, datadir=None):
+def invoke_mcerrs(maskname, nmc=500, qualcut=2, datadir=None):
     """
     Runs mcerrs on the given mask dir, which should be given as a subdir of
     DEIMOS_DATA or `datadir` can replace DEIMOS_DATA
@@ -94,14 +94,14 @@ def find_finished_masks(msknames):
     return finished_masks
 
 
-def scatter_spec1ds(dirs, maxtorun=2, waittime=1, verbose=True, nmcerrs=None):
+def scatter_spec1ds(dirs, maxtorun=2, waittime=1, verbose=True,  mcerrsdct=None):
     """
     `dirs` is list of directories with 2d reduced DEIMOS data
     `maxtorun` is the number of simultaneous processes to run
     `waittime` is the time in sec to wait between polling
 
-    `nmcerrs` determines which part gets run: if None, it means run spec1d,
-    otherwise `mcerrs`, with `nmc` given by the value of nmcerrs
+    `mcerrs_nmc` determines which part gets run: if None, it means run spec1d,
+    otherwise `mcerrs`, with `nmc` given by the value of mcerrs_nmc
     """
     procsdone = []
     procsrunning = []
@@ -131,14 +131,20 @@ def scatter_spec1ds(dirs, maxtorun=2, waittime=1, verbose=True, nmcerrs=None):
         rem_from_toinvoke = []
         for i, (name, dd) in enumerate(toinvoke):
             if len(procsrunning) < maxtorun:
-                if nmcerrs is None:
+                if mcerrsdct is None:
                     if verbose:
                         print('\nInvoking spec1d for', name, dd)
                     procsrunning.append(invoke_spec1d(name, dd))
                 else:
+                    mcerrsdctcp = mcerrsdct.copy()
+                    mcerrs_nmc = mcerrsdctcp.pop('nmc', 500)
+                    mcerrs_qualcut = mcerrsdctcp.pop('qualcut', 2)
+                    if mcerrsdctcp:
+                        raise ValueError('invalid remaining mcerrdct entries: ' + str(mcerrsdctcp))
+
                     if verbose:
-                        print('\nInvoking nmcerrs for', name, dd)
-                    procsrunning.append(invoke_mcerrs(name, nmcerrs, dd))
+                        print('\nInvoking mcerrs_nmc for', name, dd)
+                    procsrunning.append(invoke_mcerrs(name, mcerrs_nmc, mcerrs_qualcut, dd))
                 rem_from_toinvoke.append(i)
                 sleepsdone = 0
         for i in reversed(sorted(rem_from_toinvoke)):
