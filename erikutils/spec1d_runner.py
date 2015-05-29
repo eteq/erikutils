@@ -9,7 +9,7 @@ import time
 
 
 invoke_spec1d_templ = "et_spec1d,'{maskname}'\nexit\n"
-invoke_mcerrs_templ = "et_mcerrs,'{maskname},{nmc}'\nexit\n"
+invoke_mcerrs_templ = "et_mcerrs,'{maskname}',{nmc}\nexit\n"
 
 
 def _do_invoke(maskname, datadir, idlsrc, logsuffix):
