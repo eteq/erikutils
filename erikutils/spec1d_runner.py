@@ -108,7 +108,8 @@ def scatter_spec1ds(dirs, maxtorun=2, waittime=1, verbose=True, nmcerrs=None):
 
     toinvoke = []
     dirs = [os.path.abspath(d) for d in dirs]
-    cpfx = os.path.commonprefix(dirs)
+    cpfx, cnm = os.path.split(os.path.commonprefix(dirs))
+    cpfx = cpfx + os.sep
     for d in dirs:
         name = d[len(cpfx):]
         if os.path.split(name)[0] != '':
