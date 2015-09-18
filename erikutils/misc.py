@@ -276,9 +276,13 @@ def regions_to_skycoord(ds9=None):
     return scs, names, others
 
 
-def skycoord_to_regions(scs, shape, otherparams, ds9=None):
+def skycoord_to_regions(scs, shape='point', otherparams='', ds9=None):
     """
-    Add regions to an open ds9 from a SkyCoord
+    Add regions to an open ds9 from a SkyCoord.
+
+    For example, to get red 2" circles:
+
+        skycoord_to_regions(scs, 'circle', '2" # color = red')
 
     Parameters
     ----------
@@ -309,5 +313,28 @@ def skycoord_to_regions(scs, shape, otherparams, ds9=None):
             raise ValueError('otherparams must match scs')
         for ra, dec, otherparam in zip(scs.ra.deg, scs.dec.deg, otherparams):
             reglines.append('icrs; {shape} {ra}d {dec}d '.format(**locals()) + otherparam)
-
     ds9.set('regions', '\n'.join(reglines))
+
+
+def vhelio_to_lsr_term(coo):
+    """
+    From http://www.atnf.csiro.au/people/Tobias.Westmeier/tools_hihelpers.php#restframes
+
+    *Add* this to vhelio to get lsr
+    """
+    gcoo = coo.transform_to('galactic')
+    sb = np.sin(gcoo.b)
+    cb = np.cos(gcoo.b)
+    sl = np.sin(gcoo.l)
+    cl = np.cos(gcoo.l)
+    return (9*cl*cb + 12*sl*cb + 7*sb)*u.km/u.s
+
+
+def vlsr_to_gsr_term(coo, vrot=220*u.km/u.s):
+    """
+    From http://www.atnf.csiro.au/people/Tobias.Westmeier/tools_hihelpers.php#restframes
+
+    *Add* this to vlsr to get gsr
+    """
+    gcoo = coo.transform_to('galactic')
+    return vrot * np.sin(gcoo.l) * np.cos(gcoo.b) 
