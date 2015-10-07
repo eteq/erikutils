@@ -185,12 +185,18 @@ def plot_deimos_spec1d(fn, horne=False, smoothing=False, catv=None, mady=False):
         return db['LAMBDA'][0], bspec, dr['LAMBDA'][0], rspec
 
 
-def plot_deimos_slit(fn, madcolorscale=None, scalekwargs=None):
+def show_deimos_slit(spec2dfn, madcolorscale=None, scalekwargs=None, ax=None):
+    """
+    Show a deimos 2d slitlet from the spec2d file
+    """
     from matplotlib import pyplot as plt
     from astropy.stats import median_absolute_deviation
     from astropy.visualization import scale_image
 
-    with fits.open(fn) as f:
+    if ax is None:
+        ax = plt.gca()
+
+    with fits.open(spec2dfn) as f:
         h = f[1].header
         d = f[1].data
 
@@ -209,7 +215,7 @@ def plot_deimos_slit(fn, madcolorscale=None, scalekwargs=None):
         vmin = med-mad*float(madcolorscale)
         vmax = med+mad*float(madcolorscale)
 
-    plt.title(fn)
+    plt.title(spec2dfn)
     plt.imshow(dflux, interpolation='nearest', vmin=vmin, vmax=vmax)
     plt.colorbar(orientation='horizontal')
 
