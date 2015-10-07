@@ -23,19 +23,80 @@ def get_deimos_slits_inorder(maskfn):
     on the DEIMOS science images (so the far-left/lowest x object is the 0th
     entry in the returned lists)
 
-    return scs, desislits, objcats
+    return sky_coords, desislits, bluslits, objcats
     """
-    f = fits.open(maskfn)
-    xorder = np.argsort(f['BluSlits'].data['slitX1'])
+    with fits.open(maskfn) as f:
+        dblu = f['BluSlits'].data
+        xorder = np.argsort(dblu['slitX1'])
 
-    ddesi = f['DesiSlits'].data
-    scsinorder = SkyCoord(ddesi['slitRa']*u.deg, ddesi['slitDec']*u.deg)[xorder]
+        ddesi = f['DesiSlits'].data
+        scsinorder = SkyCoord(ddesi['slitRa']*u.deg, ddesi['slitDec']*u.deg)[xorder]
 
-    somdata = f['SlitObjMap'].data
-    cdata = f['ObjectCat'].data
-    cats = cdata[np.searchsorted(cdata['ObjectId'], somdata['ObjectId'][xorder])]
+        somdata = f['SlitObjMap'].data
+        cdata = f['ObjectCat'].data
+        cats = cdata[np.searchsorted(cdata['ObjectId'], somdata['ObjectId'][xorder])]
 
-    return scsinorder, ddesi[xorder], cats
+        return scsinorder, ddesi[xorder], dblu[xorder], cats
+
+
+def plot_deimos_slits(maskfn, ax=None, plotkwargs={}, onsky=True):
+    """
+    Plot all slits from a DEIMOS bintab or design file.
+
+    Parameters
+    ----------
+    maskfn : str
+        The name of the file to load from
+    ax : matplotlib axes or None
+        The axes to plot into or None to use the current axes
+    plotkwargs : dict
+        keywords to pass into the plot command used to make the boxes
+    onsky : bool
+        If True, plot the *intended* slits (in on-sky degrees RA/Dec).  If
+        False, plots the slits as dsimulator outputted them on the mask.
+
+    Returns
+    -------
+    same as `get_deimos_slits_inorder`
+    """
+    from matplotlib import pyplot as plt
+
+    if ax is None:
+        ax = plt.gca()
+
+    res = get_deimos_slits_inorder(maskfn)
+    scs, ddesi, dblu, cats = res
+
+    if onsky:
+        for drow in ddesi:
+            ra0 = drow['SLITRA'] * u.deg
+            dec0 = drow['SLITDEC'] * u.deg
+            w = drow['SLITWID'] * u.arcsec
+            l = drow['SLITLEN'] * u.arcsec
+            pa = drow['SLITLPA'] * u.deg
+            spa = np.sin(pa)
+            cpa = np.cos(pa)
+
+            xs_unrot = [-l/2, -l/2, +l/2, +l/2]
+            xs_unrot.append(xs_unrot[0])
+            xs_unrot = u.Quantity(xs_unrot)
+            ys_unrot = [-w/2, +w/2, +w/2, -w/2]
+            ys_unrot.append(ys_unrot[0])
+            ys_unrot = u.Quantity(ys_unrot)
+
+            xs = xs_unrot*cpa - ys_unrot*spa
+            ys = xs_unrot*spa + ys_unrot*cpa
+
+            plt.plot(xs + ra0, ys + dec0, **plotkwargs)
+
+    else:
+        for brow in dblu:
+            xs = [brow['SLITX1'], brow['SLITX2'], brow['SLITX3'], brow['SLITX4'], brow['SLITX1']]
+            ys = [brow['SLITY1'], brow['SLITY2'], brow['SLITY3'], brow['SLITY4'], brow['SLITY1']]
+            plt.plot(xs, ys, **plotkwargs)
+
+
+    return res
 
 
 def plot_deimos_spec1d(fn, horne=False, smoothing=False, catv=None, mady=False):
