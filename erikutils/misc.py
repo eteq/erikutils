@@ -9,6 +9,7 @@ from astropy import units as u
 from astropy.io import ascii
 from astropy.coordinates import SkyCoord, Angle
 
+import warnings
 
 def write_to_mac_clipboard(s):
     from subprocess import Popen, PIPE
@@ -322,6 +323,7 @@ def vhelio_to_lsr_term(coo):
 
     *Add* this to vhelio to get lsr
     """
+    warnings.warn(DeprecationWarning('vhelio_to_lsr_term was replaced by vhelio_to_vlsr'))
     gcoo = coo.transform_to('galactic')
     sb = np.sin(gcoo.b)
     cb = np.cos(gcoo.b)
@@ -336,7 +338,7 @@ def vlsr_to_gsr_term(coo, vrot=220*u.km/u.s):
 
     *Add* this to vlsr to get gsr
     """
-
+    warnings.warn(DeprecationWarning('vlsr_to_gsr_term was replaced by vlsr_to_vgsr'))
     gcoo = coo.transform_to('galactic')
     return vrot * np.sin(gcoo.l) * np.cos(gcoo.b)
 
