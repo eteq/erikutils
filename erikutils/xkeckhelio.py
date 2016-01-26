@@ -1,5 +1,5 @@
 #This is a direct port of x_keckhelio.pro from XIDL
-from __future__ import division
+from __future__ import division, print_function
 
 from math import pi
 from numpy import cos, sin
@@ -22,13 +22,13 @@ def x_keckhelio(ra, dec, epoch=2000.0, jd=None, tai=None,
     """
 
     if longitude is not None and latitude is not None and altitude is not None:
-        print 'using long/lat/alt instead of named observatory'
+        print('using long/lat/alt instead of named observatory')
     elif obs == 'keck':
         longitude = 360. - 155.47220
         latitude = 19.82656886
         altitude = 4000.  #meters
     else:
-        print 'Using observatory', obs
+        print('Using observatory', obs)
         if obs == 'vlt':
             longitude = 360. - 70.40322
             latitude = -24.6258
