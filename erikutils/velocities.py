@@ -3,7 +3,7 @@ from __future__ import division, print_function
 Velocity transformation functions
 """
 
-__all__ = ['vhelio_to_vlsr', 'vlsr_to_vgsr',
+__all__ = ['vr_to_helio', 'vhelio_to_vlsr', 'vlsr_to_vgsr',
             'vhelio_to_lsr_term', 'vlsr_to_gsr_term'] #these deprecated
 
 import warnings
@@ -14,6 +14,55 @@ from astropy import units as u
 from astropy.coordinates import SkyCoord, CIRS, AltAz
 from astropy.coordinates.builtin_frames.utils import get_polar_motion
 from astropy import _erfa as erfa
+
+
+@u.quantity_input(vr=u.km/u.s)
+def vr_to_helio(coord, location, time, vr=0*u.km/u.s, ssbary=False):
+    """
+    Convert as-observed radial velocity to v_helio (or v_ssbary).
+
+    Parameters
+    ----------
+    coord : astropy.coordinates.SkyCoord
+        The target location at which `vr` is observed.
+    location : astropy.coordinates.EarthLocation
+        The observing site where `vr` is measured.
+    time : astropy.time.Time
+        The time when the observation occured.
+    vr : Quantity with velocity units
+        The radial velocity of the observation.
+    ssbary : cool
+        If True, do the conversion to the Solar System barycenter, *not* the sun center.
+
+    Returns
+    -------
+    vhelio: Quantity
+        The heliocentric radial velocity (or SS barycentric if ``ssbary`` is True).
+    """
+    #first compute the earth-about-the-sun component
+    pvh, pvb = erfa.epv00(time.tdb.jd1, time.tdb.jd2)
+    if ssbary:
+        vearth = np.rollaxis(pvb[...,1,:], -1)*u.au/u.day
+    else:
+        vearth = np.rollaxis(pvh[...,1,:], -1)*u.au/u.day
+    icrs_projection = coord.icrs.represent_as('unitspherical').to_cartesian()
+    vr_earth = np.sum((vearth.T*icrs_projection.xyz), axis=-1)
+
+    # now the additional bit due to earth rotation
+    xp, yp = get_polar_motion(time)
+    sp = erfa.sp00(time.tt.jd1, time.tt.jd2)
+    theta = erfa.era00(time.ut1.jd1, time.ut1.jd2)
+    pvl = erfa.pvtob(location.longitude.radian, location.latitude.radian,
+                     location.height.to(u.m),
+                     xp, yp, sp, theta)
+    vloc = np.rollaxis(pvl[...,1,:], -1)*u.m/u.s
+
+    cirscoo = coord.transform_to(CIRS(obstime=time))
+    cirs_projection = cirscoo.represent_as('unitspherical').to_cartesian()
+    vr_rot = np.sum((vloc * cirs_projection.xyz), axis=0)
+
+    return vr + vr_rot + vr_earth
+
 
 @u.quantity_input(vhelio=u.km/u.s, uvwlsr=u.km/u.s)
 def vhelio_to_vlsr(coord, vhelio=0*u.km/u.s, lsr_definition='dynamical'):
