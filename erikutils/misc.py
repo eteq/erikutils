@@ -325,4 +325,4 @@ def get_distutils_compiler_info():
     import distutils.ccompiler
     compiler = distutils.ccompiler.new_compiler()
     distutils.sysconfig.customize_compiler(compiler)
-    return compiler.compiler_so   # This attribute is what you want
+    return compiler, compiler.compiler_so
