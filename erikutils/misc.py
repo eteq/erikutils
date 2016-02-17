@@ -314,3 +314,15 @@ def skycoord_to_regions(scs, shape='point', otherparams='', ds9=None):
         for ra, dec, otherparam in zip(scs.ra.deg, scs.dec.deg, otherparams):
             reglines.append('icrs; {shape} {ra}d {dec}d '.format(**locals()) + otherparam)
     ds9.set('regions', '\n'.join(reglines))
+
+def get_distutils_compiler_info():
+    """
+    Like all good things, this is from Stack Overflow:
+    http://stackoverflow.com/questions/7924420/how-to-get-the-actual-command-that-the-distutils-compile-function-uses/28849344#28849344
+    """
+
+    import distutils.sysconfig
+    import distutils.ccompiler
+    compiler = distutils.ccompiler.new_compiler()
+    distutils.sysconfig.customize_compiler(compiler)
+    return compiler.compiler_so   # This attribute is what you want
