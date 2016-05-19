@@ -99,7 +99,7 @@ def plot_deimos_slits(maskfn, ax=None, plotkwargs={}, onsky=True):
     return res
 
 
-def plot_deimos_spec1d(fn, horne=False, smoothing=False, catv=None, mady=False):
+def plot_deimos_spec1d(fn, horne=False, smoothing=False, catv=None, mady=False, fixfile=True):
     """
     Plots a reduced DEIMOS spec1d file with matplotlib
 
@@ -142,7 +142,11 @@ def plot_deimos_spec1d(fn, horne=False, smoothing=False, catv=None, mady=False):
     # Halpha + CaT
     lineswl = [6562.801, 8498.03, 8542.09, 8662.14]*u.angstrom
 
+
+
     with fits.open(fn) as f:
+        if fixfile:
+            f.verify('fix')
         db = f[1+int(horne)*3].data
         dr = f[2+int(horne)*3].data
 
