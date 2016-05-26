@@ -99,6 +99,76 @@ def plot_deimos_slits(maskfn, ax=None, plotkwargs={}, onsky=True):
     return res
 
 
+def get_deimos_spec1d(fn, horne=False, smoothing=False, fixfile=True):
+    """
+    Gets a reduced DEIMOS spec1d file's contents
+
+    Parameters
+    ----------
+    fn : str
+        The spec1d file to load
+    horne : bool
+        If True, use the horne extraction, otherwise boxcar
+    smoothing : float or False
+        If not False/0, smooth the spectrum.  If positive, the value gives the
+        number of pixels of boxcar smoothing to use.  If negative, gives the
+        size of a gaussian kernel to use for smoothing.
+    catv : None or astropy Quantity with velocity units
+        If not None, shows Halpha and the calcium triplet assuming the star is
+        moving at the provided velocity (use E.g. ``0*u.km/u.s`` for rest
+        wavelength).
+    mady : float or False
+        If not False/0, re-scale the part of the spectrum shown to ``mady``
+        median absolute deviations from the median
+    fixfile : bool
+        Silently fix any fits errors encountered
+
+
+
+    Returns
+    -------
+    hdus
+        hdus for the selected spectrum type
+    xb
+        wl array for the blue side
+    bspec
+        spectrum for the blue side
+    xr
+        wl array for the red side
+    rspec
+        spectrum for the red side
+    bivar
+        inverse variance for the blue side
+    rivar
+        inverse variance for the red side
+
+    """
+    from scipy import signal
+
+
+    with fits.open(fn) as f:
+        if fixfile:
+            f.verify('silentfix')
+
+        hdub = f[1+int(horne)*2]
+        hdur = f[2+int(horne)*2]
+        db = hdub.data
+        dr = hdur.data
+
+        bspec = db['SPEC'][0]
+        rspec = dr['SPEC'][0]
+
+        if smoothing:
+            if smoothing < 0:
+                kernelb = signal.gaussian(len(bspec), -smoothing)
+                kernelr = signal.gaussian(len(rspec), -smoothing)
+            else:
+                kernelr = kernelb = [1/float(smoothing)] * int(smoothing)
+            bspec = np.convolve(bspec, kernelb, 'spec')
+            rspec = np.convolve(rspec, kernelr, 'spec')
+
+        return [hdub, hdur], db['LAMBDA'][0], bspec, dr['LAMBDA'][0], rspec, db['IVAR'][0], dr['IVAR'][0]
+
 def plot_deimos_spec1d(fn, horne=False, smoothing=False, catv=None, mady=False, fixfile=True):
     """
     Plots a reduced DEIMOS spec1d file with matplotlib
@@ -120,6 +190,8 @@ def plot_deimos_spec1d(fn, horne=False, smoothing=False, catv=None, mady=False, 
     mady : float or False
         If not False/0, re-scale the part of the spectrum shown to ``mady``
         median absolute deviations from the median
+    fixfile : bool
+        Silently fix any fits errors encountered
 
 
 
@@ -143,50 +215,33 @@ def plot_deimos_spec1d(fn, horne=False, smoothing=False, catv=None, mady=False, 
     lineswl = [6562.801, 8498.03, 8542.09, 8662.14]*u.angstrom
 
 
+    hdus, xb, bspec, xr, rspec, bivar, rivar = get_deimos_spec1d(fn, horne, smoothing, fixfile)
 
-    with fits.open(fn) as f:
-        if fixfile:
-            f.verify('silentfix')
-        db = f[1+int(horne)*3].data
-        dr = f[2+int(horne)*3].data
+    plt.step(xb, bspec, color='b', where='mid')
+    plt.step(xr, rspec, color='r', where='mid')
 
-        bspec = db['SPEC'][0]
-        rspec = dr['SPEC'][0]
+    plt.plot(xb, bivar**-0.5, color='k', ls=':')
+    plt.plot(xr, rivar**-0.5, color='k', ls=':')
 
-        if smoothing:
-            if smoothing < 0:
-                kernelb = signal.gaussian(len(bspec), -smoothing)
-                kernelr = signal.gaussian(len(rspec), -smoothing)
-            else:
-                kernelr = kernelb = [1/float(smoothing)] * int(smoothing)
-            bspec = np.convolve(bspec, kernelb, 'spec')
-            rspec = np.convolve(rspec, kernelr, 'spec')
+    if catv is not None:
+        for wl in lineswl:
+            plt.axvline((wl*(1+catv/cnst.c)).to(u.angstrom).value, c='k')
 
-        plt.step(db['LAMBDA'][0], bspec, color='b', where='mid')
-        plt.step(dr['LAMBDA'][0], rspec, color='r', where='mid')
+    plt.xlabel(r'$\lambda [{\rm \AA}]$ ')
+    plt.title(fn)
 
-        plt.plot(db['LAMBDA'][0], db['IVAR'][0]**-0.5, color='k', ls=':')
-        plt.plot(dr['LAMBDA'][0], dr['IVAR'][0]**-0.5, color='k', ls=':')
+    if mady:
+        specbr = np.concatenate((bspec, rspec))
+        mad = median_absolute_deviation(specbr)
+        med = np.median(specbr)
 
-        if catv is not None:
-            for wl in lineswl:
-                plt.axvline((wl*(1+catv/cnst.c)).to(u.angstrom).value, c='k')
+        uppery = med + mad*mady
+        lowery = med - mad*mady
+        if lowery > 0:
+            lowery = 0
+        plt.ylim(lowery, uppery)
 
-        plt.xlabel(r'$\lambda [{\rm \AA}]$ ')
-        plt.title(fn)
-
-        if mady:
-            specbr = np.concatenate((db['SPEC'][0], dr['SPEC'][0]))
-            mad = median_absolute_deviation(specbr)
-            med = np.median(specbr)
-
-            uppery = med + mad*mady
-            lowery = med - mad*mady
-            if lowery > 0:
-                lowery = 0
-            plt.ylim(lowery, uppery)
-
-        return db['LAMBDA'][0], bspec, dr['LAMBDA'][0], rspec
+    return xb, bspec, xr, rspec
 
 
 def show_deimos_slit(spec2dfn, madcolorscale=None, scalekwargs=None, ax=None, fixfile=True):
