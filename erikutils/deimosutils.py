@@ -146,7 +146,7 @@ def plot_deimos_spec1d(fn, horne=False, smoothing=False, catv=None, mady=False, 
 
     with fits.open(fn) as f:
         if fixfile:
-            f.verify('fix')
+            f.verify('silentfix')
         db = f[1+int(horne)*3].data
         dr = f[2+int(horne)*3].data
 
@@ -189,7 +189,7 @@ def plot_deimos_spec1d(fn, horne=False, smoothing=False, catv=None, mady=False, 
         return db['LAMBDA'][0], bspec, dr['LAMBDA'][0], rspec
 
 
-def show_deimos_slit(spec2dfn, madcolorscale=None, scalekwargs=None, ax=None):
+def show_deimos_slit(spec2dfn, madcolorscale=None, scalekwargs=None, ax=None, fixfile=True):
     """
     Show a deimos 2d slitlet from the spec2d file
     """
@@ -201,6 +201,9 @@ def show_deimos_slit(spec2dfn, madcolorscale=None, scalekwargs=None, ax=None):
         ax = plt.gca()
 
     with fits.open(spec2dfn) as f:
+        if fixfile:
+            f.verify('silentfix')
+
         h = f[1].header
         d = f[1].data
 
@@ -214,6 +217,8 @@ def show_deimos_slit(spec2dfn, madcolorscale=None, scalekwargs=None, ax=None):
     if madcolorscale is None:
         vmin = vmax = None
     else:
+        if madcolorscale is not None:
+            raise ValueError('cannot rescale if scale_image used')
         mad = median_absolute_deviation(dflux)
         med = np.median(dflux)
         vmin = med-mad*float(madcolorscale)
@@ -221,7 +226,8 @@ def show_deimos_slit(spec2dfn, madcolorscale=None, scalekwargs=None, ax=None):
 
     plt.title(spec2dfn)
     plt.imshow(dflux, interpolation='nearest', vmin=vmin, vmax=vmax)
-    plt.colorbar(orientation='horizontal')
+    if scalekwargs is None:
+        plt.colorbar(orientation='horizontal')
 
 
 _mmperpx = (DEIMOS_pixscale * DEIMOS_sizescale).to(u.mm/u.pixel).value
