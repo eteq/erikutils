@@ -326,3 +326,25 @@ def get_distutils_compiler_info():
     compiler = distutils.ccompiler.new_compiler()
     distutils.sysconfig.customize_compiler(compiler)
     return compiler, compiler.compiler_so
+
+def offset_info(fromsc, tosc):
+    """
+    Compute offsets to get from one SkyCoord to another
+
+    Parameters
+    ----------
+    fromsc : SkyCoord
+        The "from" coordinate
+    tosc : SkyCoord
+        The "to" coordinate
+
+    Returns
+    -------
+    str
+        A string with the offset information
+    """
+    dra = (tosc.ra-fromsc.ra)*np.cos((tosc.dec + fromsc.dec)/2)
+    ddec = tosc.dec-fromsc.dec
+    eorw = 'E' if dra>0 else 'W'
+    nors = 'N' if ddec>0 else 'S'
+    return '{0} {1} {2} {3}'.format(dra.arcsec, eorw, ddec.arcsec, nors)
