@@ -33,11 +33,11 @@ def x_keckhelio(ra, dec, epoch=2000.0, jd=None, tai=None,
             longitude = 360. - 70.40322
             latitude = -24.6258
             altitude = 2635.      #meters
-        if obs == 'mmt':
+        elif obs == 'mmt':
             longitude = 360. - 110.88456
             latitude = 31.688778
             altitude = 2600.      #meters
-        if obs == 'lick':
+        elif obs == 'lick':
             longitude = 360. - 121.637222
             latitude = 37.343056
             altitude = 1283.      #meters
