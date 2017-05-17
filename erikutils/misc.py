@@ -138,7 +138,7 @@ def get_sdss_cutout_url(coord, size=204.8*u.arcsec, pixelscale=0.4*u.arcsec/u.pi
         The url for the image cutout.
 
     """
-    from urllib import urlencode
+    from six.moves.urllib_parse import urlencode
 
     if pixelscale.unit.is_equivalent(u.pixel/u.arcsec):
         pixelscale = 1/pixelscale
@@ -185,7 +185,7 @@ def show_skycoord_sdss(sc, openinbrowser=True,
     url : str
         The url to show
     """
-    from urllib import urlencode
+    from six.moves.urllib_parse import urlencode
     import webbrowser
 
     url = baseurl.format(ra=sc.ra.degree, dec=sc.dec.degree)
